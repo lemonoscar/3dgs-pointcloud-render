@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "description": "Full surviving points from recovered cleaned PLY files; no additional crop or opacity threshold.",
+  "scenes": [
+    {
+      "id": "guanlan",
+      "label": "Guanlan",
+      "input": "denoised_ply/guanlan.ply",
+      "expected_source_points": 15108095,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "huzhou",
+      "label": "Huzhou",
+      "input": "denoised_ply/huzhou.ply",
+      "expected_source_points": 1917325,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "liangzhu",
+      "label": "Liangzhu",
+      "input": "denoised_ply/liangzhu.ply",
+      "expected_source_points": 5547778,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "qilou",
+      "label": "Qilou",
+      "input": "denoised_ply_v2/qilou.ply",
+      "expected_source_points": 2709487,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "roppongi",
+      "label": "Roppongi",
+      "input": "denoised_ply_v4/roppongi.ply",
+      "expected_source_points": 8322082,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "tianxi",
+      "label": "Tianxi",
+      "input": "denoised_ply_v4/tianxi.ply",
+      "expected_source_points": 15633415,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "yingzhouyuan",
+      "label": "Yingzhouyuan",
+      "input": "denoised_ply_v3/yingzhouyuan.ply",
+      "expected_source_points": 9610561,
+      "render": {
+        "rotate_x": 0,
+        "azimuth": 170,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    },
+    {
+      "id": "yinluyuan",
+      "label": "Yinluyuan",
+      "input": "denoised_ply_v4/yinluyuan.ply",
+      "expected_source_points": 16555518,
+      "render": {
+        "rotate_x": 0,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0,
+        "bounds": null
+      }
+    }
+  ]
+}

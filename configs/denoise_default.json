@@ -1,0 +1,10 @@
+{
+  "mode": "voxel",
+  "method": "both",
+  "voxel": 0.08,
+  "radius": 0.24,
+  "min_neighbors": 5,
+  "sor_k": 20,
+  "sor_std_ratio": 2,
+  "workers": 4
+}

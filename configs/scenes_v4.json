@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "description": "Historical v4 selection; explicit source-coordinate crop and opacity filter. Not an uncropped full-cloud preset.",
+  "scenes": [
+    {
+      "id": "guanlan",
+      "label": "Guanlan",
+      "input": "denoised_ply/guanlan.ply",
+      "expected_source_points": 15108095,
+      "reference_gaussian_points": 14252965,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -96.73039245605469,
+          -10.535014533996582,
+          -2.813010263442993,
+          55.073744201660176,
+          0.5307886481285098,
+          26.168088912963867
+        ]
+      }
+    },
+    {
+      "id": "huzhou",
+      "label": "Huzhou",
+      "input": "denoised_ply/huzhou.ply",
+      "expected_source_points": 1917325,
+      "reference_gaussian_points": 1802625,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -11.085753746032715,
+          -3.008210663795471,
+          -5.32261607170105,
+          21.697619495391848,
+          0.49795757532119755,
+          10.306323652267457
+        ]
+      }
+    },
+    {
+      "id": "liangzhu",
+      "label": "Liangzhu",
+      "input": "denoised_ply/liangzhu.ply",
+      "expected_source_points": 5547778,
+      "reference_gaussian_points": 5234384,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -14.536319131851196,
+          -1.4409271812438964,
+          -8.76134181022644,
+          11.3595820236206,
+          0.28076330751180634,
+          11.335476207733153
+        ]
+      }
+    },
+    {
+      "id": "qilou",
+      "label": "Qilou",
+      "input": "denoised_ply_v2/qilou.ply",
+      "expected_source_points": 2709487,
+      "reference_gaussian_points": 2557542,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          24.519099731445312,
+          -8.923399868011474,
+          -5.565557250976562,
+          46.06417358398438,
+          0.766070445775986,
+          19.024787216186525
+        ]
+      }
+    },
+    {
+      "id": "roppongi",
+      "label": "Roppongi",
+      "input": "denoised_ply_v4/roppongi.ply",
+      "expected_source_points": 8322082,
+      "reference_gaussian_points": 7877648,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -7.370933628082275,
+          -6.0161737442016605,
+          -3.992792558670044,
+          4.296269893646244,
+          0.44009814858436586,
+          8.808463859558108
+        ]
+      }
+    },
+    {
+      "id": "tianxi",
+      "label": "Tianxi",
+      "input": "denoised_ply_v4/tianxi.ply",
+      "expected_source_points": 15633415,
+      "reference_gaussian_points": 14749025,
+      "render": {
+        "rotate_x": 270,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -12.010199394226074,
+          -10.94727367401123,
+          -8.781811618804932,
+          28.76231758117676,
+          5.177600078582763,
+          20.522816734313977
+        ]
+      }
+    },
+    {
+      "id": "yingzhouyuan",
+      "label": "Yingzhouyuan",
+      "input": "denoised_ply_v3/yingzhouyuan.ply",
+      "expected_source_points": 9610561,
+      "reference_gaussian_points": 9084311,
+      "render": {
+        "rotate_x": 0,
+        "azimuth": 170,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -2.128759241104126,
+          -5.800294017791748,
+          -0.7568887233734131,
+          23.33744621276855,
+          19.513698196411134,
+          7.476548862457274
+        ]
+      }
+    },
+    {
+      "id": "yinluyuan",
+      "label": "Yinluyuan",
+      "input": "denoised_ply_v4/yinluyuan.ply",
+      "expected_source_points": 16555518,
+      "reference_gaussian_points": 15691830,
+      "render": {
+        "rotate_x": 0,
+        "azimuth": -55,
+        "elevation": 50,
+        "min_opacity": 0.1,
+        "bounds": [
+          -8.85032639503479,
+          -9.646576499938964,
+          -3.6585099935531615,
+          14.304409933090213,
+          13.696205949783334,
+          6.048454713821411
+        ]
+      }
+    }
+  ]
+}

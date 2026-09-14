@@ -1,0 +1,14 @@
+{
+  "width": 2400,
+  "height": 1800,
+  "ssaa": 2,
+  "azimuth": -55,
+  "elevation": 50,
+  "rotate_x": 0,
+  "point_radius": 1,
+  "shadow": 0,
+  "tile": 1024,
+  "max_points": 0,
+  "min_opacity": 0,
+  "bounds": null
+}

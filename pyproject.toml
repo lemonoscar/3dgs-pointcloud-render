@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plyscene"
+version = "0.1.0"
+description = "Attribute-preserving PLY denoising and point / Gaussian scene rendering"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24,<3", "scipy>=1.10,<2", "Pillow>=10,<12"]
+
+[project.optional-dependencies]
+gaussian = ["torch>=2.4,<3", "gsplat==1.5.3"]
+
+[project.scripts]
+plyscene = "plyscene.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
