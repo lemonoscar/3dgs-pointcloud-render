@@ -1,0 +1,19 @@
+{
+  "radius": 1.65,
+  "floor_offset": 0.1,
+  "below": 0.25,
+  "near_height": 0.6,
+  "far_height": 1.7,
+  "near_distance": 0.15,
+  "line_width": 9.0,
+  "frustum_count": 12,
+  "frustum_length": 0.3,
+  "frustum_width": 0.225,
+  "frustum_height": 0.18,
+  "frustum_line_width": 3.0,
+  "route_color": "#ff315b",
+  "frustum_color": "#13bcb0",
+  "start_color": "#08cbb0",
+  "end_color": "#f02ac7",
+  "kind": "illustrative"
+}

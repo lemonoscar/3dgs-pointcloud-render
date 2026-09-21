@@ -4,7 +4,7 @@ from .transforms import rotation_x
 
 DEFAULTS = dict(width=2400, height=1800, ssaa=2, azimuth=-55., elevation=50.,
                 rotate_x=0., point_radius=1, shadow=0., tile=1024,
-                max_points=0, min_opacity=0., bounds=None)
+                max_points=0, min_opacity=0., bounds=None, framing=.78)
 
 # A quality preset controls sampling and image resolution, not data filtering.
 QUALITY = dict(full=dict(width=2400, height=1800, ssaa=2, max_points=0),
@@ -21,7 +21,7 @@ def make_camera(points, c):
     lo, hi = projected.min(0), projected.max(0)
     center = (lo + hi) / 2
     w, h = c['width']*c['ssaa'], c['height']*c['ssaa']
-    scale = .78 * min(w/max(hi[0]-lo[0], 1e-6), h/max(hi[1]-lo[1], 1e-6))
+    scale = c['framing'] * min(w/max(hi[0]-lo[0], 1e-6), h/max(hi[1]-lo[1], 1e-6))
     distance = max(float(np.linalg.norm(hi-lo))*2, 10.)
     view = np.eye(4, dtype='f4')
     view[:3, :3] = basis.T

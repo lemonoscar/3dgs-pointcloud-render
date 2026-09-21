@@ -1,5 +1,6 @@
 """Public commands: inspect, denoise, render, batch. No implicit data cleaning."""
 import argparse
+import hashlib
 import importlib.metadata
 import json
 import platform
@@ -47,6 +48,8 @@ def resolve(defaults, overrides):
             raise ValueError('shadow must be [0,1]; min_opacity must be [0,1)')
         if not 0 < result['elevation'] <= 90:
             raise ValueError('elevation must be (0,90]')
+        if not 0 < result['framing'] <= .90:
+            raise ValueError('framing must be (0,0.90] to leave space for annotations/shadows')
         if result['bounds'] is not None:
             b = np.asarray(result['bounds'], dtype=float)
             if b.shape != (6,) or not np.isfinite(b).all() or np.any(b[:3] > b[3:]):
@@ -65,6 +68,8 @@ def available(output, suffix):
 
 def render_config(args, scene=None):
     overrides = config_file(args.config) | (scene or {})
+    if getattr(args, 'trajectory', None):
+        overrides.setdefault('elevation', 45.)
     # Explicit CLI choices override files; absent flags preserve scene settings.
     if args.quality is not None:
         overrides.update(camera.QUALITY[args.quality])
@@ -125,36 +130,86 @@ def selection(records, config):
         after_opacity=visible, selected_points=selected, rendered_points=len(ids))
 
 
-def render_one(source, output, backend, config, plan=False, expected=None):
+def render_one(source, output, backend, config, plan=False, expected=None,
+               trajectory_path=None, route_config_path=None):
     n, dtype, _, _ = ply_io.header(source)
     if expected is not None and n != expected:
         raise ValueError(f'{source}: source count {n} differs from manifest {expected}')
     if backend == 'gaussian' and not ply_io.GAUSSIAN_FIELDS <= set(dtype.names):
         raise ValueError('Input lacks Gaussian attributes; use --backend points')
     available(output, '.png')
+    route_details = {}
+    if route_config_path and not trajectory_path:
+        raise ValueError('--route-config requires --trajectory')
+    if trajectory_path:
+        from . import trajectory
+        route, route_stats = trajectory.load(trajectory_path)
+        rc = trajectory.config(route_config_path)
+        output = Path(output)
+        crop_output = output.with_suffix('.crop.ply')
+        route_output = output.with_suffix('.trajectory.csv')
+        for path in (crop_output, route_output):
+            if path.exists():
+                raise FileExistsError(f'Refusing to overwrite {path}; choose a new output')
+        route_details = dict(trajectory=str(trajectory_path), route_config=rc,
+                             crop_output=str(crop_output), trajectory_output=str(route_output), **route_stats)
     if plan:
         print(json.dumps(dict(input=str(source), source_points=n, backend=backend,
-                              output=str(output), config=config), indent=2))
+                              output=str(output), config=config, **route_details), indent=2))
         return
     start = time.monotonic()
     records = ply_io.read(source)
-    ids, points, counts = selection(records, config)
+    # Sample only AFTER the full route corridor is selected. The exported crop
+    # always contains all survivors, independent of preview sampling/backend.
+    ids, points, counts = selection(records, config | {'max_points': 0} if trajectory_path else config)
+    overlay = None
+    if trajectory_path:
+        keep = trajectory.crop_mask(points, route, rc, config)
+        ids, points = ids[keep], points[keep]
+        crop_keep = np.zeros(len(records), dtype=bool)
+        crop_keep[ids] = True
+        counts['after_route_crop'] = len(ids)
+        frames = trajectory.frustums(route, rc, config)
+        cam = camera.make_camera(np.vstack([points, trajectory.framing_points(route, frames)]), config)
+        route_details.update(input=ply_io.fingerprint(trajectory_path), config=rc,
+            length=float(np.linalg.norm(np.diff(route, axis=0), axis=1).sum()),
+            route_rows=len(route), crop_segments=len(trajectory.vertices(route))-1,
+            selected_indices_sha256=hashlib.sha256(ids.astype('<i8').tobytes()).hexdigest(),
+            annotation='2D overlay; no depth occlusion or collision validation',
+            frustums='Illustrative 3D path tangents, not measured camera orientations',
+            frustum_apices=[p.tolist() for p, _ in frames],
+            coordinates='Source PLY coordinates; rotate_x is display/crop frame only',
+            crop='Union of local-height segment corridors; camera-facing near-side cutaway, not semantic segmentation')
+        limit = config['max_points']
+        if limit and len(ids) > limit:
+            sample = np.linspace(0, len(ids)-1, limit, dtype='i8')
+            ids, points = ids[sample], points[sample]
+        counts['rendered_points'] = len(ids)
+        overlay = lambda canvas: trajectory.draw(canvas, route, frames, cam, rc, config)
+    else:
+        cam = camera.make_camera(points, config)
     selected = records[ids]
-    cam = camera.make_camera(points, config)
     if backend == 'gaussian':
         from .render_gaussian import render
     else:
         from .render_points import render
     layer = render(selected, points, cam, config)
-    image = compose.finish(layer, points, cam, config)
+    image = compose.finish(layer, points, cam, config, overlay)
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open('xb') as stream:
         image.save(stream, format='PNG', dpi=(300, 300))
+    if trajectory_path:
+        ply_io.write_selected(source, crop_output, crop_keep)
+        with route_output.open('x') as stream:
+            np.savetxt(stream, route, delimiter=',', header='x,y,z', comments='', fmt='%.17g')
+        route_details['crop_file'] = ply_io.fingerprint(crop_output)
+        route_details['normalized_trajectory'] = ply_io.fingerprint(route_output)
     report(output, source, config, dict(backend=backend, counts=counts,
         camera_view=cam['view'].tolist(), intrinsics=cam['intrinsics'].tolist(),
         color_mode='RGB or DC only; higher SH not evaluated',
         shadow='synthetic footprint' if config['shadow'] else 'none',
+        **({'trajectory': route_details} if trajectory_path else {}),
         elapsed_seconds=time.monotonic()-start))
     print(f'{source}: {counts["rendered_points"]:,}/{n:,} points -> {output}')
 
@@ -175,6 +230,8 @@ def main(argv=None):
         p = sub.add_parser(name, help='Render one PLY' if name == 'render' else 'Render independent images from a manifest')
         if name == 'render':
             p.add_argument('input', type=Path)
+            p.add_argument('--trajectory', type=Path, help='Aligned XYZ CSV with x,y,z header; enables automatic route cutaway')
+            p.add_argument('--route-config', type=Path, help='Route crop and annotation JSON; requires --trajectory')
         else:
             p.add_argument('--manifest', type=Path, required=True)
             p.add_argument('--data-root', type=Path, required=True)
@@ -220,7 +277,8 @@ def main(argv=None):
             print(json.dumps(stats, indent=2))
         elif args.command == 'render':
             c = render_config(args)
-            render_one(args.input, args.output, args.backend, c, args.plan)
+            render_one(args.input, args.output, args.backend, c, args.plan,
+                       trajectory_path=args.trajectory, route_config_path=args.route_config)
         else:
             manifest = config_file(args.manifest)
             if manifest.get('schema_version') != 1 or not isinstance(manifest.get('scenes'), list) or not manifest['scenes']:

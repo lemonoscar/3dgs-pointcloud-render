@@ -10,9 +10,10 @@
 | 去噪 | Radius、Statistical Outlier Removal（SOR）或两者组合，保留幸存点的全部属性 | CPU |
 | 点云渲染 | 正交投影、不透明圆点、深度遮挡和超采样抗锯齿 | CPU |
 | Gaussian 渲染 | 基于尺度、四元数和透明度的各向异性 Gaussian 合成 | NVIDIA GPU、CUDA、PyTorch、gsplat |
+| 轨迹路径图 | 已对齐 XYZ 轨迹、自动局部裁切、近侧剖切、三维切线视锥；支持两个后端 | 取决于渲染后端 |
 | 批量渲染 | 按清单逐个输出独立图片和报告 | 取决于渲染后端 |
 
-两个渲染后端均提供可调整的质量参数和可选软阴影。**默认使用全部有效点、无额外裁剪、无透明度阈值，并关闭合成阴影。** 输出为无损 PNG，不提供拼图、视频、交互式查看器、模型训练或点云到 Gaussian 的重建。
+两个渲染后端均提供可调整的质量参数和可选软阴影。**未提供轨迹时，默认使用全部有效点、无额外裁剪、无透明度阈值，并关闭合成阴影。** 输出为无损 PNG，不提供拼图、视频、交互式查看器、模型训练或点云到 Gaussian 的重建。
 
 当前版本为 **0.1.0**。Gaussian 后端保留并使用各向异性形状与透明度，但目前只计算 DC 颜色，不计算高阶球谐（SH）的视角相关颜色。
 
@@ -110,9 +111,22 @@ plyscene render data/gaussian.ply \
 
 也可以输入经过本工具去噪、仍保留完整 Gaussian 属性的 PLY。默认质量与点云后端相同，不限制 Gaussian 数量。
 
+### 5. 按已有轨迹绘制路径图
+
+```bash
+plyscene render data/input.ply \
+  --trajectory data/route.csv \
+  --route-config configs/route_default.json \
+  --output outputs/route.png
+```
+
+CSV 带 `x,y,z` 表头，坐标和单位必须与 PLY 一致。工具自动沿路线裁切，降低近侧遮挡，默认45°俯视；视锥尖端严格在线上，方向来自三维路径切线，不代表实测相机姿态。默认点云，也可指定 `--backend gaussian`；不寻找路线或自动配准。
+
+同时生成 PNG、保留全部属性的 `.crop.ply`、规范化 `.trajectory.csv` 和 JSON 报告。取景、线宽和视锥大小可配置。参见 [完整绘制方法](docs/trajectory_rendering.md) 和 [瀛洲园三个示例](examples/yingzhouyuan/README.md)。
+
 ### 执行前预检
 
-`denoise`、`render` 和 `batch` 都支持 `--plan`。在命令末尾添加该参数，只检查文件头、相关配置和输出冲突，不执行去噪或渲染，不创建输出。
+`denoise`、`render` 和 `batch` 都支持 `--plan`。在命令末尾添加该参数，只检查文件头、相关配置、提供的轨迹内容和输出冲突，不执行去噪或渲染，不创建输出。
 
 `--plan` 不扫描全部属性、不加载 CUDA、不估计内存或显存是否充足；实际执行仍可能遇到数据数值、依赖或资源错误。
 
@@ -274,7 +288,7 @@ plyscene batch --manifest scenes.json --data-root data \
 - 不覆盖输入文件。输出 PLY、PNG 或对应 JSON 已存在时拒绝执行，请选择新的输出路径。
 - 报告记录输入/输出 SHA-256、实际配置、点数、依赖版本和可获取的 Git 状态。大文件哈希会增加磁盘读取时间。
 - 中断可能留下不完整输出，程序不会自动删除这些文件。
-- 两个渲染后端统一按“浮点属性有限性检查 → 可选透明度过滤 → 可选裁剪 → 可选均匀索引采样”选择点。“全量”指通过检查和显式过滤后的全部点。
+- 两个渲染后端统一按“浮点属性有限性检查 → 可选透明度过滤 → 可选 bounds 裁剪 → 可选轨迹裁切 → 可选均匀索引采样”选择点。“全量”指通过检查和显式过滤后的全部点。
 - 全量点云和高倍超采样具有较高内存开销。Gaussian 的分块仅减少部分光栅化中间开销，所有 Gaussian 参数仍需放入显存。
 - 点云、模型、缓存和生成图片应保留在 Git 之外。仓库提供排除规则和 CI 文件检查，不应使用强制添加绕过限制。
 
@@ -291,8 +305,10 @@ src/plyscene/
   camera.py               # 共享相机和质量预设
   render_points.py        # CPU 点云渲染
   render_gaussian.py      # CUDA Gaussian 渲染
+  trajectory.py           # 轨迹校验、局部裁切、三维切线视锥与标注
   compose.py              # 背景、可选软阴影与最终图像合成
 configs/                  # 通用预设和可选数据集清单
+examples/yingzhouyuan/     # 三条示意轨迹与配置，不含场景资产
 tests/                    # 临时合成数据测试
 docs/                     # 数据格式与补充说明
 .github/workflows/        # CPU 测试和入库文件检查
@@ -309,7 +325,7 @@ git diff --check
 
 测试在临时目录生成小型 PLY，覆盖属性保留、去噪、点选择、相机、遮挡、CLI、质量覆盖、阴影开关、批量独立出图和禁止覆盖。测试不需要真实场景文件。
 
-CPU 合成数据流程和包构建已验证。Gaussian 后端尚未完成实际 GPU 图像验证；CLI 预检与相机测试不能替代 GPU 验收。跨平台、大规模数据资源占用和最终视觉质量应在目标环境中单独验证。
+21项 CPU 测试覆盖原有流程与轨迹几何、局部高度裁切、三维视锥对齐、属性保留和输出保护。瀛洲园扩展路线已完成实际点云与 Gaussian GPU 渲染，两者裁切指纹及相机一致，详见 [实图验证记录](docs/trajectory_validation.md)。跨平台、全新 CUDA 安装和八场景批量仍需单独验证。
 
 ## 常见问题
 

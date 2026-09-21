@@ -53,3 +53,11 @@ CPU 测试覆盖完整属性保留、Radius/SOR 三种方法、异常输入、�
 后续实图验收顺序：先一个小场景（例如 huzhou）点云图 → 同一输入 Gaussian 图 → 确认朝向和阴影 → 八场景完整批量。此阶段需额外验证 GPU 环境、显存峰值、Gaussian 分块接缝与真实视觉效果。首版未执行这些昂贵验证。
 
 当前版本使用可安装依赖范围而非完全锁定环境。输出记录实际依赖版本；正式发布图像时还应单独保存 `python -m pip freeze`、GPU/驱动信息和实际命令，保存在外部结果目录。只有完成实图回归后再建立不可变 release/tag；源码推送不代表实图回归或发布验收完成。
+
+## 2026-09-21：通用轨迹功能整理
+
+旧 `render_indoor_pointcloud_route_v9.py`、`render_indoor_gaussian_route_v8.py`、`render_indoor_steps_route.py` 和 `render_indoor_steps_extended.py` 的路线标注需求归入 `src/plyscene/trajectory.py` 与 `render --trajectory`，三个案例转为 `examples/yingzhouyuan/` 下的小型 CSV/JSON。旧脚本、手工裁切版本和大文件保留原位。
+
+这里使用原始 `visual_ply/yingzhouyuan.ply`（13,860,573点），与上表的旋转、去噪版本不同，不能直接混用轨迹。通用实现没有加入按场景名称判断的逻辑、手工删柱区域或本地依赖路径。后端共用正交相机，因此不承诺复刻旧透视图片。
+
+扩展路线已完成真实点云与 Gaussian 渲染，并核对相同裁切和取景；详见 [验证记录](trajectory_validation.md)。该结果不等于八场景全量批量或全新 GPU 环境安装通过。复现命令及原始坐标说明见 [示例](../examples/yingzhouyuan/README.md)。

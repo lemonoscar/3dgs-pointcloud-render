@@ -1,0 +1,15 @@
+{
+  "radius": 1.65,
+  "floor_offset": 0.1,
+  "below": 0.25,
+  "near_height": 0.35,
+  "far_height": 1.05,
+  "near_distance": 0.05,
+  "line_width": 9,
+  "frustum_count": 17,
+  "frustum_length": 0.3,
+  "frustum_width": 0.225,
+  "frustum_height": 0.18,
+  "frustum_line_width": 3,
+  "kind": "illustrative"
+}

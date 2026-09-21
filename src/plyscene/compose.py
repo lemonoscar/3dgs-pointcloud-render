@@ -5,7 +5,7 @@ from .camera import project
 from .transforms import rotation_x
 
 
-def finish(layer, points, camera, config):
+def finish(layer, points, camera, config, overlay=None):
     w, h = layer.size
     canvas = Image.new('RGBA', (w, h), 'white')
     if config['shadow']:
@@ -22,5 +22,8 @@ def finish(layer, points, camera, config):
         shade = Image.new('RGBA', (w, h), (35, 38, 42, 0))
         shade.putalpha(shadow)
         canvas = Image.alpha_composite(canvas, shade)
-    return Image.alpha_composite(canvas, layer).convert('RGB').resize(
+    canvas = Image.alpha_composite(canvas, layer)
+    if overlay is not None:
+        overlay(canvas)
+    return canvas.convert('RGB').resize(
         (config['width'], config['height']), Image.Resampling.LANCZOS)
