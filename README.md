@@ -2,6 +2,8 @@
 
 面向 PLY 文件的点云处理与静态可视化工具，提供属性保留式去噪、纯点云渲染和 3D Gaussian Splatting 渲染。通过统一命令 `plyscene` 使用，不依赖仿真器、特定场景或数据集。
 
+**收到八场景点云压缩包的使用者：先完成“安装”，再按“使用分发的处理后点云出图”操作。无需重新去噪。** GitHub 仓库提供代码、配置和文档；点云 ZIP 由提供者单独发送，示例图片不随仓库分发。
+
 ## 功能
 
 | 功能 | 说明 | 运行条件 |
@@ -13,7 +15,7 @@
 | 轨迹路径图 | 已对齐 XYZ 轨迹、自动局部裁切、近侧剖切、三维切线视锥；支持两个后端 | 取决于渲染后端 |
 | 批量渲染 | 按清单逐个输出独立图片和报告 | 取决于渲染后端 |
 
-两个渲染后端均提供可调整的质量参数和可选软阴影。**未提供轨迹时，默认使用全部有效点、无额外裁剪、无透明度阈值，并关闭合成阴影。** 输出为无损 PNG，不提供拼图、视频、交互式查看器、模型训练或点云到 Gaussian 的重建。
+两个渲染后端均提供可调整的质量参数和可选软阴影。**普通 `render` 命令未提供轨迹、配置或过滤参数时，使用全部有效点、无额外裁剪、无透明度阈值，并关闭合成阴影。** 批量场景清单可以覆盖这些默认值；分发流程使用的 `scenes_v4.json` 包含裁切和透明度过滤。输出为无损 PNG，不提供拼图、视频、交互式查看器、模型训练或点云到 Gaussian 的重建。
 
 当前版本为 **0.1.0**。Gaussian 后端保留并使用各向异性形状与透明度，但目前只计算 DC 颜色，不计算高阶球谐（SH）的视角相关颜色。
 
@@ -47,7 +49,117 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 最后一项应为 `True`。本项目固定使用 `gsplat==1.5.3`，首次运行可能需要编译扩展，需准备匹配的 CUDA Toolkit 和编译工具链。安装成功或检测到 GPU，不代表实际渲染已通过验证。
 
-## 输入格式
+## 使用分发的处理后点云出图
+
+### 1. 接收文件并核对完整性
+
+完整数据包包含八个独立 ZIP：`guanlan.zip`、`huzhou.zip`、`liangzhu.zip`、`qilou.zip`、`roppongi.zip`、`tianxi.zip`、`yingzhouyuan.zip`、`yinluyuan.zip`，以及 `README.md`、`SHA256SUMS`、`checksums.json` 和一份 `scenes_v4.json`。只渲染一个场景时，只需取得对应 ZIP；建议同时取得校验文件。
+
+八个 ZIP 合计约 3.1 GiB，解压还需要额外空间。这些 PLY 已经过历史预处理，保留 Gaussian 属性；既可用 CPU 绘制点云，也可在具备依赖时使用 Gaussian 后端。**不要为了复现再次执行去噪或手动旋转文件**，展示朝向由场景清单设置。
+
+在 Linux/Bash 中，将下面路径替换成实际收到压缩包的目录。后续命令在同一个终端中执行：
+
+```bash
+PACKAGE_DIR=/absolute/path/to/received_packages
+DATA_ROOT=/absolute/path/to/extracted_data
+
+# 收齐八个 ZIP 时检查全部文件；每个文件应显示 OK
+(cd "$PACKAGE_DIR" && sha256sum -c SHA256SUMS)
+```
+
+仅收到一个 ZIP 时，例如骑楼，可只核验这一项：
+
+```bash
+(cd "$PACKAGE_DIR" && sha256sum -c <(grep -E '  qilou\.zip$' SHA256SUMS))
+```
+
+`SHA256SUMS` 校验 ZIP；`checksums.json` 另记录包内 PLY 的 SHA-256、路径、预期点数和打包时的代码提交。校验不通过时先重新取得文件。批量命令会核对预期点数，但这不能代替 SHA-256 内容校验。
+
+### 2. 解压并保留目录层级
+
+将收到的场景 ZIP 解压到同一个数据目录（需安装 `unzip`）：
+
+```bash
+mkdir -p "$DATA_ROOT"
+for scene in guanlan huzhou liangzhu qilou roppongi tianxi yingzhouyuan yinluyuan; do
+  if [ -f "$PACKAGE_DIR/$scene.zip" ]; then
+    unzip -n "$PACKAGE_DIR/$scene.zip" -d "$DATA_ROOT"
+  fi
+done
+```
+
+建议使用新的空目录。`-n` 不覆盖已有文件；如果目录里有旧版本，换一个新目录，避免混用。全部解压后的结构为：
+
+```text
+extracted_data/                 # --data-root 必须指向这一层
+├── denoised_ply/
+│   ├── guanlan.ply
+│   ├── huzhou.ply
+│   └── liangzhu.ply
+├── denoised_ply_v2/
+│   └── qilou.ply
+├── denoised_ply_v3/
+│   └── yingzhouyuan.ply
+└── denoised_ply_v4/
+    ├── roppongi.ply
+    ├── tianxi.ply
+    └── yinluyuan.ply
+```
+
+**不要把 PLY 全部移到根目录，也不要把 `--data-root` 指向某个 `denoised_ply*` 子目录。** 只解压部分场景时，仅有对应目录和文件即可。数据可以放在仓库外；包里的 `README.md` 不需要复制进代码仓库。
+
+### 3. 先渲染一个场景（CPU 点云）
+
+回到安装时克隆的仓库根目录，并激活 `.venv`。以骑楼为例，先预检，再出图：
+
+```bash
+plyscene batch --manifest configs/scenes_v4.json --data-root "$DATA_ROOT" \
+  --scene qilou --backend points --shadow \
+  --output outputs/qilou_points --plan
+
+plyscene batch --manifest configs/scenes_v4.json --data-root "$DATA_ROOT" \
+  --scene qilou --backend points --shadow \
+  --output outputs/qilou_points
+```
+
+输出为 `outputs/qilou_points/qilou.png` 和 `qilou.json`（参数、点数和校验等记录）。将 `qilou` 换成上述任意场景 ID 即可。`--plan` 不出图、不加载 CUDA，也不能保证实际运行内存足够。再次执行时请换输出目录，程序不会覆盖已有图片或报告。
+
+### 4. 渲染全部八个场景
+
+收齐并解压八个 ZIP 后运行；每个场景独立出图，不生成拼图：
+
+```bash
+plyscene batch --manifest configs/scenes_v4.json --data-root "$DATA_ROOT" \
+  --backend points --shadow --output outputs/eight_scenes_points
+```
+
+默认输出 2400 × 1800，2× 超采样，不限制筛选后的点数。八场景顺序执行；大点云可能耗时且占用较多内存。想先快速检查可添加 `--quality preview` 并换一个输出目录，预览质量不等同于最终质量。
+
+### 5. 选择裁切方式和阴影
+
+| 目标 | `--manifest` 使用的清单 | 行为 |
+|---|---|---|
+| 按历史取景复现 | `configs/scenes_v4.json` | 使用每场景朝向、显式 bounds 裁切和 `min_opacity=0.1` |
+| 展示处理后文件的全部有效点 | `configs/scenes_clean_full.json` | 使用每场景朝向，不额外裁切，`min_opacity=0` |
+
+两份清单读取**同一批处理后 PLY**；`clean_full` 不代表原始未处理点云，也不能恢复预处理已删除的结构。不要用原始 PLY 替换这些输入，否则点数、坐标和取景可能不匹配。两份配置都随代码仓库提供；包内附带的 `scenes_v4.json` 供核对分发版本。
+
+以上命令显式开启 `--shadow`，生成的是用于展示的合成软阴影，并非场景真实光照。改成 `--no-shadow` 可关闭。阴影不会修复缺失点或增加几何细节。
+
+### 6. 可选：Gaussian 出图与轨迹绘图
+
+完成可选 Gaussian 环境安装后，同一份数据和场景清单可这样使用：
+
+```bash
+plyscene batch --manifest configs/scenes_v4.json --data-root "$DATA_ROOT" \
+  --scene qilou --backend gaussian --shadow --output outputs/qilou_gaussian
+```
+
+CPU 点云出图成功不代表 CUDA/Gaussian 环境已通过验证。跨机器复现时建议先完成点云流程，再单独验证 Gaussian。
+
+本节只绘制场景，不添加路线。轨迹绘图需要与输入 PLY 坐标一致的 CSV。**仓库 `examples/yingzhouyuan/` 中的轨迹针对原始瀛洲园 PLY，不能直接套用本次分发的 `denoised_ply_v3/yingzhouyuan.ply`**；两者存在历史坐标转换。详见 [示例与坐标说明](examples/yingzhouyuan/README.md) 和 [轨迹绘制方法](docs/trajectory_rendering.md)。历史数据来源及配置说明见 [复现文档](docs/reproduction.md)。
+
+## 自备 PLY：输入格式
 
 支持 **binary_little_endian 1.0** 格式的 PLY，要求只包含一个非空 `vertex` 元素，所有属性均为标量。ASCII、大端、包含面或 `list` 属性的文件不受支持，需要先转换为符合要求的点云 PLY。
 
@@ -61,9 +173,11 @@ Gaussian 属性必须采用本项目支持的存储约定：自然对数尺度�
 
 坐标单位沿用原文件，不自动识别米、厘米或毫米。默认展示向上轴为 Z，可通过 `rotate_x` 调整展示旋转。完整约定见 [数据格式与参数说明](docs/data_format.md)。
 
-## 快速开始
+## 自备 PLY：检查、去噪与绘图
 
 以下用 `data/input.ply` 举例，请替换为自己的文件路径。去噪是可选步骤；已有合适输入时可以直接渲染。
+
+收到上述处理后点云包时，优先使用前面的场景清单流程，无需执行本节去噪命令。
 
 ### 1. 检查文件
 
